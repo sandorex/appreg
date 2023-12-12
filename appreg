@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+#
+# https://github.com/sandorex/appreg
+# bundled executable indexer
+#
+# uses systemd to automate .desktop file creation from files in specified dirs
+
+import os
+import re
+
+from pathlib import Path
+from os.path import expanduser
+
+# TODO make it overrideable using env vars
+DIRS = [
+    expanduser("~/.apps"),
+    expanduser("~/Apps"),
+]
+
+ICON_DIR = Path("~/.local/share/icons").expanduser()
+DESKTOP_FILE_DIR = Path("~/.local/share/applications").expanduser()
+DESKTOP_FILE_PREFIX = "appreg-"
+
+def template_desktop_file(name: str, exec_: Path, icon=None):
+    content = """[Desktop Entry]
+Name={name}
+Comment=Bundle application found by appreg
+Exec={exec}
+Type=Application
+Terminal=false
+""".format_map({
+        "name": name,
+        "exec": str(exec_.absolute()),
+    })
+
+    if icon is not None:
+        content += "Icon=" + str(icon) + "\n"
+
+    return content
+
+# TODO
+# def appimage_extract_icon(appimage_path):
+#    pass
+
+def format_name(file: Path):
+    # TODO should it even be formatted?
+    return file.stem
+
+# TODO add click cli interface
+def main():
+    executables = []
+    for dir_ in DIRS:
+        try:
+            for filename in os.listdir(dir_):
+                file = Path(dir_, filename)
+
+                # skip non-executable files or non-files
+                if not os.access(file, os.X_OK) or not file.is_file():
+                    continue
+
+                executables.append(file)
+        except FileNotFoundError:
+            # if they dont exist just ignore them unless debug
+            pass
+
+    # remove all old files
+    for file in DESKTOP_FILE_DIR.iterdir():
+        if file.name.startswith(DESKTOP_FILE_PREFIX) and file.is_file():
+            file.unlink()
+
+    for exe in executables:
+        print("Found", exe.name)
+        with open(DESKTOP_FILE_DIR / (DESKTOP_FILE_PREFIX + exe.stem + ".desktop"), "w") as file:
+            file.write(template_desktop_file(format_name(exe), exe))
+
+            # os.remove(os.path.join(DESKTOP_FILE_DIR, ))
+
+    # for dir_ in os.listdir(dir_):
+        # print(dir_)
+    # print(os.listdir())
+
+if __name__ == "__main__":
+    main()
+
