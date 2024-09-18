@@ -1,0 +1,9 @@
+[package]
+name = "appreg"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+clap = { version = "4.5.15", features = ["derive", "env"] }
+rust-ini = "0.21.1"
